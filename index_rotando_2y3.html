@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Gestor de Equipos de Oficinas FLYR</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Gestor de Equipos de Oficinas FLYR</h1>
+        <div class="date-display" id="currentDate"></div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number" id="totalTeams">0</div>
+            <div class="stat-label">Total Equipos</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="totalPeople">0</div>
+            <div class="stat-label">Total Personas</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="dailyCapacity">52</div>
+            <div class="stat-label">Capacidad Diaria</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="todayOccupancy">0</div>
+            <div class="stat-label">Ocupación Hoy</div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="office-section">
+            <div class="office-header">
+                <h2 class="office-title">Configuración de la Empresa</h2>
+            </div>
+            <div class="form-group">
+                <label>Capacidad máxima diaria (personas):</label>
+                <input type="number" id="dailyCapacityInput" min="1" max="200" value="52" onchange="updateDailyCapacity(this.value)">
+            </div>
+        </div>
+
+        <div class="office-section">
+            <div class="add-equipment-form">
+                <h3 style="color: #8e44ad; margin-bottom: 15px;">➕ Agregar Nuevo Equipo</h3>
+                <div id="addTeamMessage"></div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombre del Equipo:</label>
+                        <input type="text" id="teamName" placeholder="Ej: Equipo de Desarrollo">
+                    </div>
+                    <div class="form-group">
+                        <label>Número de Personas:</label>
+                        <input type="number" id="teamSize" min="1" max="52" value="5">
+                    </div>
+                    <button class="btn" onclick="addTeam()">Agregar Equipo</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="office-section">
+            <div class="office-header">
+                <h2 class="office-title">Distribución Automatizada</h2>
+                <button class="btn" onclick="redistributeTeams()">🔄 Redistribuir Equipos</button>
+            </div>
+            <div id="redistributionMessage"></div>
+            <div class="week-schedule" id="weekSchedule"></div>
+        </div>
+
+        <div class="office-section">
+            <div class="office-header">
+                <h2 class="office-title">Equipos Registrados</h2>
+            </div>
+            <div id="teamsList"></div>
+        </div>
+    </div>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
