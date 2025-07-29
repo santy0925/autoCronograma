@@ -561,7 +561,10 @@
       .stat-number {
         font-size: 2em;
       }
+      
     }
+
+
     .form-row-center {
   display: flex;
   justify-content: center;
