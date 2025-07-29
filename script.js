@@ -25,6 +25,18 @@ const DAY_NAMES = {
 };
 
 /**
+ * Función para mezclar un array aleatoriamente (Fisher-Yates shuffle)
+ */
+function shuffleArray(array) {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
+/**
  * Carga los datos guardados
  */
 function loadData() {
@@ -76,18 +88,21 @@ function updateDailyCapacity(value) {
 function addTeam() {
     const name = document.getElementById('teamName').value.trim();
     const size = parseInt(document.getElementById('teamSize').value) || 0;
-    // daysPerWeek ya no se toma del input, se asignará automáticamente
     const daysPerWeek = 0; 
     
     const messageDiv = document.getElementById('addTeamMessage');
     
     if (!name) {
-        messageDiv.innerHTML = '<div class="alert">Por favor, ingresa el nombre del equipo.</div>';
+        if (messageDiv) {
+            messageDiv.innerHTML = '<div class="alert">Por favor, ingresa el nombre del equipo.</div>';
+        }
         return;
     }
     
     if (size <= 0 || size > appConfig.dailyCapacity) {
-        messageDiv.innerHTML = `<div class="alert">El número de personas debe estar entre 1 y ${appConfig.dailyCapacity}.</div>`;
+        if (messageDiv) {
+            messageDiv.innerHTML = `<div class="alert">El número de personas debe estar entre 1 y ${appConfig.dailyCapacity}.</div>`;
+        }
         return;
     }
     
@@ -95,7 +110,7 @@ function addTeam() {
         id: teamIdCounter++,
         name: name,
         size: size,
-        daysPerWeek: daysPerWeek, // Inicialmente 0, se asignará en la redistribución
+        daysPerWeek: daysPerWeek,
         assignedDays: []
     };
     
@@ -104,19 +119,18 @@ function addTeam() {
     // Limpiar formulario
     document.getElementById('teamName').value = '';
     document.getElementById('teamSize').value = '5';
-    // document.getElementById('daysPerWeek').value = '3'; // Se elimina
     
-    messageDiv.innerHTML = '<div class="success">✅ Equipo agregado exitosamente.</div>';
+    if (messageDiv) {
+        messageDiv.innerHTML = '<div class="success">✅ Equipo agregado exitosamente.</div>';
+        setTimeout(() => {
+            messageDiv.innerHTML = '';
+        }, 3000);
+    }
     
     saveData();
-    redistributeTeams(); // Redistribuir después de agregar
+    redistributeTeams();
     renderTeamsList();
     updateStats();
-    
-    // Limpiar mensaje después de 3 segundos
-    setTimeout(() => {
-        messageDiv.innerHTML = '';
-    }, 3000);
 }
 
 /**
@@ -126,7 +140,7 @@ function deleteTeam(teamId) {
     if (confirm('¿Estás seguro de que quieres eliminar este equipo?')) {
         appConfig.teams = appConfig.teams.filter(team => team.id !== teamId);
         saveData();
-        redistributeTeams(); // Redistribuir después de eliminar
+        redistributeTeams();
         renderTeamsList();
         updateStats();
     }
@@ -136,7 +150,6 @@ function deleteTeam(teamId) {
  * Activa el modo de edición para un equipo
  */
 function editTeam(teamId) {
-    // Cancelar cualquier edición anterior
     if (editingTeamId && editingTeamId !== teamId) {
         cancelEdit(editingTeamId);
     }
@@ -147,24 +160,18 @@ function editTeam(teamId) {
     
     if (!teamCard || !team) return;
     
-    // Agregar clase de edición
     teamCard.classList.add('editing');
     
-    // Mostrar formulario de edición
     const editForm = teamCard.querySelector('.edit-form');
     editForm.classList.add('active');
     
-    // Rellenar valores actuales
     editForm.querySelector('.edit-name').value = team.name;
     editForm.querySelector('.edit-size').value = team.size;
-    // Los días por semana son automáticos, solo se muestran
     editForm.querySelector('.edit-days').value = `${team.daysPerWeek} día(s)`;
     
-    // Ocultar botones de acción normales
     const normalActions = teamCard.querySelector('.normal-actions');
     normalActions.style.display = 'none';
     
-    // Mostrar botones de edición
     const editActions = teamCard.querySelector('.edit-actions');
     editActions.style.display = 'flex';
 }
@@ -181,9 +188,7 @@ function saveTeamEdit(teamId) {
     const editForm = teamCard.querySelector('.edit-form');
     const newName = editForm.querySelector('.edit-name').value.trim();
     const newSize = parseInt(editForm.querySelector('.edit-size').value) || 0;
-    // newDays ya no se toma de un input editable
     
-    // Validaciones
     if (!newName) {
         alert('Por favor, ingresa el nombre del equipo.');
         return;
@@ -194,18 +199,14 @@ function saveTeamEdit(teamId) {
         return;
     }
     
-    // Actualizar el equipo
     team.name = newName;
     team.size = newSize;
-    // team.daysPerWeek se reasigna en redistributeTeams()
     
-    // Guardar y redistribuir
     saveData();
-    redistributeTeams(); // Redistribuir después de editar
+    redistributeTeams();
     renderTeamsList();
     updateStats();
     
-    // Mensaje de éxito
     const messageDiv = document.createElement('div');
     messageDiv.innerHTML = '<div class="success">✅ Equipo actualizado exitosamente.</div>';
     teamCard.appendChild(messageDiv);
@@ -227,18 +228,14 @@ function cancelEdit(teamId) {
     
     if (!teamCard) return;
     
-    // Remover clase de edición
     teamCard.classList.remove('editing');
     
-    // Ocultar formulario de edición
     const editForm = teamCard.querySelector('.edit-form');
     editForm.classList.remove('active');
     
-    // Mostrar botones normales
     const normalActions = teamCard.querySelector('.normal-actions');
     normalActions.style.display = 'flex';
     
-    // Ocultar botones de edición
     const editActions = teamCard.querySelector('.edit-actions');
     editActions.style.display = 'none';
     
@@ -246,19 +243,20 @@ function cancelEdit(teamId) {
 }
 
 /**
- * Algoritmo para redistribuir equipos automáticamente
+ * Algoritmo mejorado para redistribuir equipos con más aleatoriedad
  */
 function redistributeTeams() {
     const messageDiv = document.getElementById('redistributionMessage');
 
-    // Ordenar equipos por tamaño (más grandes primero) para mejor distribución
-    const teamsToAssign = [...appConfig.teams].sort((a, b) => b.size - a.size);
+    // Mezclar equipos aleatoriamente para cada redistribución
+    const teamsToAssign = shuffleArray(appConfig.teams);
 
-    let maxRetries = 10;
+    let maxRetries = 15; // Aumentamos los intentos
     let retry = 0;
-    let stillUnassigned = true;
+    let bestAssignment = null;
+    let bestScore = -1;
 
-    while (retry < maxRetries && stillUnassigned) {
+    while (retry < maxRetries) {
         // Limpiar horario actual
         DAYS.forEach(day => {
             appConfig.weekSchedule[day] = [];
@@ -267,36 +265,65 @@ function redistributeTeams() {
         // Limpiar asignaciones de equipos
         appConfig.teams.forEach(team => {
             team.assignedDays = [];
-            team.daysPerWeek = 0; // Reset para que assignTeamToDays lo calcule
+            team.daysPerWeek = 0;
         });
 
-        let unassignedTeams = [];
+        let currentAssignment = {
+            schedule: JSON.parse(JSON.stringify(appConfig.weekSchedule)),
+            teams: appConfig.teams.map(team => ({...team, assignedDays: [], daysPerWeek: 0}))
+        };
 
+        let unassignedCount = 0;
+        let totalAssignedDays = 0;
+
+        // Asignar equipos con más aleatoriedad
         for (let team of teamsToAssign) {
-            const assignedDaysResult = assignTeamToDays(team);
+            const teamInAssignment = currentAssignment.teams.find(t => t.id === team.id);
+            const assignedDaysResult = assignTeamToDaysRandomly(teamInAssignment, currentAssignment.schedule);
+            
             if (assignedDaysResult.length < 2 && team.size > 0) {
-                unassignedTeams.push({
-                    team: team,
-                    assigned: assignedDaysResult.length,
-                    needed: '2-3'
-                });
+                unassignedCount++;
             }
+            totalAssignedDays += assignedDaysResult.length;
         }
 
-        if (unassignedTeams.length === 0) {
-            stillUnassigned = false;
-            messageDiv.innerHTML = '<div class="success">✅ Todos los equipos fueron asignados correctamente con 2 o 3 días.</div>';
+        // Calcular puntuación de esta asignación
+        const score = totalAssignedDays - (unassignedCount * 10);
+        
+        if (score > bestScore) {
+            bestScore = score;
+            bestAssignment = currentAssignment;
+        }
+
+        // Si encontramos una asignación perfecta, la usamos
+        if (unassignedCount === 0) {
+            break;
         }
 
         retry++;
     }
 
-    if (stillUnassigned) {
-        let warningMsg = '<div class="alert">⚠️ No se pudo asignar correctamente a algunos equipos tras varios intentos:<br>';
-        appConfig.teams.forEach(team => {
-            if (team.assignedDays.length < 2 && team.size > 0) {
-                warningMsg += `• ${team.name}: ${team.assignedDays.length} día(s) asignado(s)<br>`;
+    // Aplicar la mejor asignación encontrada
+    if (bestAssignment) {
+        appConfig.weekSchedule = bestAssignment.schedule;
+        bestAssignment.teams.forEach(assignedTeam => {
+            const originalTeam = appConfig.teams.find(t => t.id === assignedTeam.id);
+            if (originalTeam) {
+                originalTeam.assignedDays = assignedTeam.assignedDays;
+                originalTeam.daysPerWeek = assignedTeam.daysPerWeek;
             }
+        });
+    }
+
+    // Verificar equipos sin asignar
+    const unassignedTeams = appConfig.teams.filter(team => team.assignedDays.length < 2 && team.size > 0);
+    
+    if (unassignedTeams.length === 0) {
+        messageDiv.innerHTML = '<div class="success">✅ Todos los equipos fueron redistribuidos exitosamente con nuevos días.</div>';
+    } else {
+        let warningMsg = '<div class="alert">⚠️ Algunos equipos no pudieron asignarse completamente:<br>';
+        unassignedTeams.forEach(team => {
+            warningMsg += `• ${team.name}: ${team.assignedDays.length} día(s) asignado(s)<br>`;
         });
         warningMsg += '</div>';
         messageDiv.innerHTML = warningMsg;
@@ -304,73 +331,91 @@ function redistributeTeams() {
 
     saveData();
     renderWeekSchedule();
-    renderTeamsList(); // Vuelve a renderizar la lista para mostrar los días asignados
+    renderTeamsList();
     updateStats();
 
-    // Limpiar mensaje después de 5 segundos
     setTimeout(() => {
         messageDiv.innerHTML = '';
     }, 5000);
 }
 
 /**
- * Asigna un equipo a los días disponibles (entre 2 y 3 días).
- * Este algoritmo es más estricto: un equipo solo se asigna si puede obtener 2 o 3 días.
- * Si no puede obtener al menos 2 días sin exceder la capacidad, se considera "no asignado"
- * para los propósitos de este algoritmo, y su daysPerWeek será 0 o 1 si no se pudo más.
- * Modifica directamente appConfig.weekSchedule y team.assignedDays
- * @returns {Array} Los días asignados al equipo.
+ * Asigna un equipo a días aleatorios disponibles (versión con más aleatoriedad)
  */
-function assignTeamToDays(team) {
-    const availableDays = [...DAYS];
-
-    const getHypotheticalDailyOccupancy = (tempSchedule) => {
+function assignTeamToDaysRandomly(team, tempSchedule) {
+    const getHypotheticalDailyOccupancy = (schedule) => {
         const dailyOccupancy = {};
         DAYS.forEach(day => {
-            dailyOccupancy[day] = tempSchedule[day].reduce((sum, t) => sum + t.size, 0);
+            dailyOccupancy[day] = schedule[day].reduce((sum, t) => sum + t.size, 0);
         });
         return dailyOccupancy;
     };
 
-    const attemptAssignment = (targetDays, force = false) => {
+    const attemptRandomAssignment = (targetDays, force = false) => {
         const assigned = [];
-        const tempSchedule = JSON.parse(JSON.stringify(appConfig.weekSchedule));
         let hypothetical = getHypotheticalDailyOccupancy(tempSchedule);
-
-        const sortedDays = [...availableDays].sort((a, b) => hypothetical[a] - hypothetical[b]);
-
-        for (let day of sortedDays) {
-            if (assigned.length >= targetDays) break;
-            if (hypothetical[day] + team.size <= appConfig.dailyCapacity || force) {
-                assigned.push(day);
-                hypothetical[day] += team.size;
+        
+        // Mezclar días aleatoriamente para cada intento
+        const shuffledDays = shuffleArray(DAYS);
+        
+        // Intentar varias combinaciones aleatorias
+        const maxAttempts = 10;
+        let bestAssignment = [];
+        
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            const currentAssignment = [];
+            const tempHypothetical = {...hypothetical};
+            const availableDays = shuffleArray(DAYS);
+            
+            for (let day of availableDays) {
+                if (currentAssignment.length >= targetDays) break;
+                if (tempHypothetical[day] + team.size <= appConfig.dailyCapacity || force) {
+                    currentAssignment.push(day);
+                    tempHypothetical[day] += team.size;
+                }
             }
+            
+            if (currentAssignment.length > bestAssignment.length) {
+                bestAssignment = [...currentAssignment];
+            }
+            
+            if (bestAssignment.length === targetDays) break;
         }
-        return assigned;
+        
+        return bestAssignment;
     };
 
-    // Alternancia: cada equipo par → 3 días, impar → 2 días (por ID)
-    const preferredDays = (team.id % 2 === 0) ? 3 : 2;
+    // Alternar aleatoriamente entre 2 y 3 días, con más variabilidad
+    const random = Math.random();
+    let preferredDays;
+    
+    if (random < 0.6) {
+        preferredDays = 3;
+    } else {
+        preferredDays = 2;
+    }
 
-    let finalAssignedDays = attemptAssignment(preferredDays);
+    let finalAssignedDays = attemptRandomAssignment(preferredDays);
+    
     if (finalAssignedDays.length === preferredDays) {
         team.daysPerWeek = preferredDays;
     } else {
-        // Reintentar con el otro valor
+        // Intentar con el otro valor
         const fallbackDays = (preferredDays === 3) ? 2 : 3;
-        finalAssignedDays = attemptAssignment(fallbackDays);
+        finalAssignedDays = attemptRandomAssignment(fallbackDays);
+        
         if (finalAssignedDays.length === fallbackDays) {
             team.daysPerWeek = fallbackDays;
         } else {
-            // Fuerza al menos 2 días
-            finalAssignedDays = attemptAssignment(2, true);
-            team.daysPerWeek = 2;
+            // Forzar al menos 2 días
+            finalAssignedDays = attemptRandomAssignment(2, true);
+            team.daysPerWeek = Math.max(2, finalAssignedDays.length);
         }
     }
 
     team.assignedDays = finalAssignedDays;
     team.assignedDays.forEach(day => {
-        appConfig.weekSchedule[day].push({
+        tempSchedule[day].push({
             id: team.id,
             name: team.name,
             size: team.size
@@ -379,6 +424,7 @@ function assignTeamToDays(team) {
 
     return finalAssignedDays;
 }
+
 /**
  * Renderiza el horario semanal
  */
@@ -473,8 +519,7 @@ function updateStats() {
     const totalTeams = appConfig.teams.length;
     const totalPeople = appConfig.teams.reduce((sum, team) => sum + team.size, 0);
     
-    // Calcular ocupación de hoy
-    const today = new Date().getDay(); // 0=domingo, 1=lunes, etc.
+    const today = new Date().getDay();
     let todayKey = ''; 
     
     switch(today) {
@@ -483,7 +528,7 @@ function updateStats() {
         case 3: todayKey = 'wednesday'; break;
         case 4: todayKey = 'thursday'; break;
         case 5: todayKey = 'friday'; break;
-        default: todayKey = 'monday'; // Asumir lunes si es fin de semana o desconocido
+        default: todayKey = 'monday';
     }
     
     const todayOccupancy = appConfig.weekSchedule[todayKey] ? 
@@ -501,10 +546,8 @@ function updateStats() {
 function init() {
     loadData();
     updateCurrentDate();
-    redistributeTeams(); // Redistribuir al cargar la página
+    redistributeTeams();
 }
-
-
 
 // Inicializar cuando se carga la página
 window.onload = init;
