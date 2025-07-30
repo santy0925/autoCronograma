@@ -6,51 +6,82 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Configura tu conexión
+// ⚙️ Conexión a MySQL
 const db = mysql.createConnection({
   host: 'localhost',
-  user: 'root',
-  password: 'flyr2025',
+  user: 'root', // cambia si tu usuario es diferente
+  password: '', // pon tu contraseña si tiene
   database: 'flyr'
 });
 
-// Conexión inicial
+// ▶ Conexión
 db.connect(err => {
   if (err) {
-    console.error('❌ Error de conexión:', err);
+    console.error('Error al conectar a MySQL:', err);
     return;
   }
   console.log('✅ Conectado a MySQL');
 });
 
-// Obtener todos los equipos
+// ------------------- RUTAS -------------------
+
+// 🔄 Obtener equipos con sus integrantes
 app.get('/equipos', (req, res) => {
-  db.query('SELECT * FROM equipos', (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(results);
+  const queryEquipos = 'SELECT * FROM equipos';
+  const queryIntegrantes = 'SELECT * FROM integrantes';
+
+  db.query(queryEquipos, (err, equipos) => {
+    if (err) return res.status(500).send(err);
+
+    db.query(queryIntegrantes, (err2, integrantes) => {
+      if (err2) return res.status(500).send(err2);
+
+      const equiposConIntegrantes = equipos.map(equipo => {
+        const lista = integrantes.filter(i => i.equipo_id === equipo.id);
+        return { ...equipo, integrantes: lista };
+      });
+
+      res.json(equiposConIntegrantes);
+    });
   });
 });
 
-// Agregar equipo
+// 🆕 Crear equipo
 app.post('/equipos', (req, res) => {
   const { nombre, personas, dias } = req.body;
-  db.query('INSERT INTO equipos (nombre, personas, dias) VALUES (?, ?, ?)',
+  db.query(
+    'INSERT INTO equipos (nombre, personas, dias) VALUES (?, ?, ?)',
     [nombre, personas, dias],
     (err, result) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: result.insertId });
-    });
+      if (err) return res.status(500).send(err);
+      res.send({ id: result.insertId });
+    }
+  );
 });
 
-// Eliminar equipo
+// ❌ Eliminar equipo (y sus integrantes)
 app.delete('/equipos/:id', (req, res) => {
-  db.query('DELETE FROM equipos WHERE id = ?', [req.params.id], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ deleted: result.affectedRows });
+  const id = req.params.id;
+  db.query('DELETE FROM equipos WHERE id = ?', [id], err => {
+    if (err) return res.status(500).send(err);
+    res.sendStatus(200);
   });
 });
 
-// Servidor activo
+// 🧑 Agregar integrante a un equipo
+app.post('/integrantes', (req, res) => {
+  const { equipo_id, nombre } = req.body;
+  db.query(
+    'INSERT INTO integrantes (equipo_id, nombre) VALUES (?, ?)',
+    [equipo_id, nombre],
+    (err, result) => {
+      if (err) return res.status(500).send(err);
+      res.send({ id: result.insertId });
+    }
+  );
+});
+
+// ------------------- INICIAR SERVIDOR -------------------
 app.listen(3000, () => {
-  console.log('🚀 Servidor backend corriendo en http://localhost:3000');
+  console.log('🚀 Backend corriendo en http://localhost:3000');
 });
