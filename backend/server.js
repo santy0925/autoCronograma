@@ -10,7 +10,7 @@ app.use(express.json());
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root', // cambia si tu usuario es diferente
-  password: '', // pon tu contraseña si tiene
+  password: 'flyr2025', // pon tu contraseña si tiene
   database: 'flyr'
 });
 
