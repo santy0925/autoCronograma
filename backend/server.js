@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ⚙️ Conexión a MySQL
+// Conexión a MySQL
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root', // cambia si tu usuario es diferente
@@ -25,7 +25,7 @@ db.connect(err => {
 
 // ------------------- RUTAS -------------------
 
-// 🔄 Obtener equipos con sus integrantes
+// Obtener equipos con sus integrantes
 app.get('/equipos', (req, res) => {
   const queryEquipos = 'SELECT * FROM equipos';
   const queryIntegrantes = 'SELECT * FROM integrantes';
@@ -46,7 +46,7 @@ app.get('/equipos', (req, res) => {
   });
 });
 
-// 🆕 Crear equipo
+//  Crear equipo
 app.post('/equipos', (req, res) => {
   const { nombre, personas, dias } = req.body;
   db.query(
@@ -59,7 +59,7 @@ app.post('/equipos', (req, res) => {
   );
 });
 
-// ❌ Eliminar equipo (y sus integrantes)
+//  Eliminar equipo (y sus integrantes)
 app.delete('/equipos/:id', (req, res) => {
   const id = req.params.id;
   db.query('DELETE FROM equipos WHERE id = ?', [id], err => {
@@ -68,7 +68,7 @@ app.delete('/equipos/:id', (req, res) => {
   });
 });
 
-// 🧑 Agregar integrante a un equipo
+//  Agregar integrante a un equipo
 app.post('/integrantes', (req, res) => {
   const { equipo_id, nombre } = req.body;
   db.query(
