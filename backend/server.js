@@ -20,7 +20,7 @@ db.connect(err => {
     console.error('Error al conectar a MySQL:', err);
     return;
   }
-  console.log('✅ Conectado a MySQL');
+  console.log('Conectado a MySQL');
 });
 
 // ------------------- RUTAS -------------------
